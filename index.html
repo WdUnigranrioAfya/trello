@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema Kanban - Esteira Trello</title>
+  <title>Kanban Esteira Trello - Sincronizado com GitHub</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -13,6 +13,9 @@
       --text-muted: #94a3b8;
       --accent: #38bdf8;
       --accent-hover: #0284c7;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
       --border-color: #475569;
     }
 
@@ -30,26 +33,40 @@
       flex-wrap: wrap;
     }
 
-    .title-area h1 { font-size: 1.25rem; color: var(--accent); font-weight: 700; }
-    .title-area p { font-size: 0.8rem; color: var(--text-muted); }
+    .title-area h1 { font-size: 1.2rem; color: var(--accent); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .title-area p { font-size: 0.75rem; color: var(--text-muted); }
 
-    .actions { display: flex; gap: 12px; align-items: center; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-    input[type="file"] { display: none; }
-    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--text-muted); }
+    .status-dot.online { background-color: var(--success); }
+    .status-dot.syncing { background-color: var(--warning); animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
     .btn {
       background-color: var(--card-bg);
       color: var(--text-color);
       border: 1px solid var(--border-color);
-      padding: 8px 16px;
+      padding: 7px 14px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       font-weight: 500;
       transition: all 0.2s;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     
     .btn:hover { background-color: var(--border-color); }
@@ -57,28 +74,28 @@
     .btn-primary:hover { background-color: var(--accent-hover); color: #fff; }
 
     .search-bar {
-      padding: 8px 12px;
+      padding: 7px 12px;
       background-color: var(--bg-color);
       border: 1px solid var(--border-color);
       border-radius: 6px;
       color: var(--text-color);
-      font-size: 0.875rem;
-      width: 260px;
+      font-size: 0.85rem;
+      width: 200px;
     }
 
     .kanban-board {
       flex: 1;
       display: flex;
       overflow-x: auto;
-      padding: 20px;
-      gap: 16px;
+      padding: 16px;
+      gap: 14px;
       align-items: flex-start;
     }
 
     .kanban-column {
       background-color: var(--panel-bg);
-      min-width: 300px;
-      max-width: 320px;
+      min-width: 290px;
+      max-width: 310px;
       border-radius: 8px;
       border: 1px solid var(--border-color);
       max-height: 100%;
@@ -87,9 +104,9 @@
     }
 
     .column-header {
-      padding: 12px 16px;
+      padding: 10px 14px;
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -106,12 +123,12 @@
     }
 
     .column-cards {
-      padding: 12px;
+      padding: 10px;
       overflow-y: auto;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       min-height: 100px;
     }
 
@@ -119,7 +136,7 @@
       background-color: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      padding: 12px;
+      padding: 10px;
       cursor: grab;
       transition: transform 0.15s, box-shadow 0.15s;
     }
@@ -127,7 +144,7 @@
     .card:hover { border-color: var(--accent); transform: translateY(-2px); }
     .card.dragging { opacity: 0.4; }
 
-    .card-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 8px; line-height: 1.3; }
+    .card-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
 
     .card-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
     .card-tag { display: inline-block; background-color: rgba(56, 189, 248, 0.15); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; width: fit-content; }
@@ -136,7 +153,7 @@
     .modal-backdrop {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.75);
       display: none;
       justify-content: center;
       align-items: center;
@@ -148,31 +165,31 @@
       border: 1px solid var(--border-color);
       border-radius: 8px;
       width: 90%;
-      max-width: 600px;
+      max-width: 620px;
       max-height: 85vh;
       overflow-y: auto;
-      padding: 24px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .modal-header { display: flex; justify-content: space-between; align-items: center; }
     .modal-header h2 { font-size: 1.1rem; color: var(--accent); }
     .close-btn { cursor: pointer; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; }
 
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { font-size: 0.8rem; color: var(--text-muted); }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 0.75rem; color: var(--text-muted); }
     .form-control {
       background-color: var(--bg-color);
       border: 1px solid var(--border-color);
       color: var(--text-color);
       padding: 8px 12px;
       border-radius: 4px;
-      font-size: 0.875rem;
+      font-size: 0.85rem;
     }
 
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
     .empty-state {
       margin: auto;
@@ -180,55 +197,177 @@
       color: var(--text-muted);
       padding: 40px;
     }
+
+    /* Notification Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      font-size: 0.85rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 2000;
+    }
   </style>
 </head>
 <body>
 
   <header>
     <div class="title-area">
-      <h1>Esteira de Produção Kanban</h1>
-      <p>Gestão e Atualização do CSV do Trello</p>
+      <h1>Esteira Kanban Trello</h1>
+      <p>Sincronização em Tempo Real via GitHub</p>
     </div>
     <div class="actions">
-      <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar disciplinas ou responsáveis..." oninput="filterCards()">
-      <label class="btn">
-        📁 Carregar CSV
-        <input type="file" id="csvFileInput" accept=".csv" onchange="handleFileUpload(event)">
-      </label>
-      <button class="btn btn-primary" onclick="exportUpdatedCSV()">💾 Exportar CSV Atualizado</button>
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Desconectado</span>
+      </div>
+      <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar..." oninput="renderKanban()">
+      <button class="btn" onclick="fetchFromGitHub()">🔄 Atualizar</button>
+      <button class="btn" onclick="openConfigModal()">⚙️ Configurar GitHub</button>
+      <button class="btn btn-primary" onclick="exportUpdatedCSV()">💾 Baixar CSV</button>
     </div>
   </header>
 
   <main class="kanban-board" id="kanbanBoard">
     <div class="empty-state">
-      <h2>Nenhum ficheiro carregado</h2>
-      <p>Clique em <strong>"Carregar CSV"</strong> e selecione o seu ficheiro do Trello para visualizar o quadro.</p>
+      <h2>A carregar dados do GitHub...</h2>
+      <p>Se nada acontecer, clique em <strong>"⚙️ Configurar GitHub"</strong> para definir o repositório e o token.</p>
     </div>
   </main>
+
+  <!-- Modal Configuração GitHub -->
+  <div class="modal-backdrop" id="configModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Configurar Conexão com GitHub</h2>
+        <button class="close-btn" onclick="closeConfigModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Utilizador / Organização do GitHub (Owner)</label>
+        <input type="text" class="form-control" id="ghOwner" placeholder="ex: seu-usuario">
+      </div>
+      <div class="form-group">
+        <label>Nome do Repositório (Repo)</label>
+        <input type="text" class="form-control" id="ghRepo" placeholder="ex: kanban-trello">
+      </div>
+      <div class="form-group">
+        <label>Caminho do Ficheiro CSV no Repositório</label>
+        <input type="text" class="form-control" id="ghPath" placeholder="ex: esteira.csv ou VRAfZTv6 - esteira-producao-disciplinas.csv">
+      </div>
+      <div class="form-group">
+        <label>Branch</label>
+        <input type="text" class="form-control" id="ghBranch" value="main">
+      </div>
+      <div class="form-group">
+        <label>GitHub Personal Access Token (Fine-Grained ou Classic com permissão de escrita 'contents')</label>
+        <input type="password" class="form-control" id="ghToken" placeholder="ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX">
+        <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">O token é guardado apenas localmente no seu navegador e serve para poder gravar alterações.</span>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+        <button class="btn" onclick="closeConfigModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveConfig()">Guardar e Conectar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Edição de Card -->
   <div class="modal-backdrop" id="cardModal">
     <div class="modal">
       <div class="modal-header">
         <h2>Editar Card</h2>
-        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <button class="close-btn" onclick="closeCardModal()">&times;</button>
       </div>
       <div id="modalBody">
-        <!-- Campos gerados via JS -->
+        <!-- Gerado via JS -->
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveCardDetails()">Guardar Alterações</button>
+        <button class="btn" onclick="closeCardModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveCardDetails()">Guardar e Sincronizar</button>
       </div>
     </div>
   </div>
+
+  <!-- Toast Notificação -->
+  <div class="toast" id="toast"></div>
 
   <script>
     let rawCSVHeaders = [];
     let csvData = [];
     let activeCardIndex = null;
+    let currentFileSHA = null;
+    let autoSyncInterval = null;
 
-    // Parser CSV RFC4180 Robusto em JS Puro
+    // Definições do GitHub salvas no navegador
+    let config = {
+      owner: localStorage.getItem('gh_owner') || '',
+      repo: localStorage.getItem('gh_repo') || '',
+      path: localStorage.getItem('gh_path') || '',
+      branch: localStorage.getItem('gh_branch') || 'main',
+      token: localStorage.getItem('gh_token') || ''
+    };
+
+    window.onload = function() {
+      if (config.owner && config.repo && config.path) {
+        fetchFromGitHub();
+        startAutoSync();
+      } else {
+        openConfigModal();
+      }
+    };
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.style.borderColor = isError ? 'var(--danger)' : 'var(--accent)';
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    function updateStatus(state, text) {
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      dot.className = 'status-dot ' + state;
+      txt.innerText = text;
+    }
+
+    function openConfigModal() {
+      document.getElementById('ghOwner').value = config.owner;
+      document.getElementById('ghRepo').value = config.repo;
+      document.getElementById('ghPath').value = config.path;
+      document.getElementById('ghBranch').value = config.branch;
+      document.getElementById('ghToken').value = config.token;
+      document.getElementById('configModal').style.display = 'flex';
+    }
+
+    function closeConfigModal() {
+      document.getElementById('configModal').style.display = 'none';
+    }
+
+    function saveConfig() {
+      config.owner = document.getElementById('ghOwner').value.trim();
+      config.repo = document.getElementById('ghRepo').value.trim();
+      config.path = document.getElementById('ghPath').value.trim();
+      config.branch = document.getElementById('ghBranch').value.trim() || 'main';
+      config.token = document.getElementById('ghToken').value.trim();
+
+      localStorage.setItem('gh_owner', config.owner);
+      localStorage.setItem('gh_repo', config.repo);
+      localStorage.setItem('gh_path', config.path);
+      localStorage.setItem('gh_branch', config.branch);
+      localStorage.setItem('gh_token', config.token);
+
+      closeConfigModal();
+      fetchFromGitHub();
+      startAutoSync();
+    }
+
+    // Parser RFC4180
     function parseCSV(text) {
       const lines = [];
       let row = [];
@@ -240,57 +379,82 @@
         const nextChar = text[i+1];
 
         if (char === '"') {
-          if (inQuotes && nextChar === '"') {
-            token += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
+          if (inQuotes && nextChar === '"') { token += '"'; i++; }
+          else { inQuotes = !inQuotes; }
         } else if (char === ',' && !inQuotes) {
-          row.push(token);
-          token = '';
+          row.push(token); token = '';
         } else if ((char === '\r' || char === '\n') && !inQuotes) {
           if (char === '\r' && nextChar === '\n') i++;
-          row.push(token);
-          token = '';
-          if (row.length > 0 && !(row.length === 1 && row[0] === '')) {
-            lines.push(row);
-          }
+          row.push(token); token = '';
+          if (row.length > 0 && !(row.length === 1 && row[0] === '')) lines.push(row);
           row = [];
         } else {
           token += char;
         }
       }
-      if (token !== '' || row.length > 0) {
-        row.push(token);
-        lines.push(row);
-      }
+      if (token !== '' || row.length > 0) { row.push(token); lines.push(row); }
       return lines;
     }
 
-    function handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    // Função de Codificação UTF-8 para Base64 (sem falhas com acentos)
+    function utf8_to_b64(str) {
+      return window.btoa(unescape(encodeURIComponent(str)));
+    }
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const text = e.target.result;
-        const parsed = parseCSV(text);
+    function b64_to_utf8(str) {
+      return decodeURIComponent(escape(window.atob(str)));
+    }
 
-        if (parsed.length < 1) return;
+    // Procura o ficheiro no GitHub
+    async function fetchFromGitHub(silent = false) {
+      if (!config.owner || !config.repo || !config.path) return;
 
-        rawCSVHeaders = parsed[0];
-        csvData = parsed.slice(1).map((row, index) => {
-          const item = { _index: index };
-          rawCSVHeaders.forEach((header, i) => {
-            item[header] = row[i] !== undefined ? row[i] : '';
+      if (!silent) updateStatus('syncing', 'A sincronizar com GitHub...');
+
+      const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}?ref=${config.branch}`;
+      const headers = config.token ? { 'Authorization': `Bearer ${config.token}` } : {};
+
+      try {
+        const res = await fetch(url, { headers, cache: 'no-store' });
+        if (!res.ok) throw new Error(`Erro API GitHub: ${res.status}`);
+
+        const json = await res.json();
+        
+        // Se o ficheiro não mudou no servidor, ignora
+        if (currentFileSHA === json.sha) {
+          if (!silent) updateStatus('online', 'Sincronizado');
+          return;
+        }
+
+        currentFileSHA = json.sha;
+        const csvText = b64_to_utf8(json.content.replace(/\n/g, ''));
+        const parsed = parseCSV(csvText);
+
+        if (parsed.length > 0) {
+          rawCSVHeaders = parsed[0];
+          csvData = parsed.slice(1).map((row, index) => {
+            const item = { _index: index };
+            rawCSVHeaders.forEach((header, i) => {
+              item[header] = row[i] !== undefined ? row[i] : '';
+            });
+            return item;
           });
-          return item;
-        });
+          renderKanban();
+          updateStatus('online', 'Sincronizado');
+          if (silent) showToast('Quadro atualizado com alterações recentes.');
+        }
+      } catch (err) {
+        console.error(err);
+        updateStatus('', 'Erro de Conexão');
+        if (!silent) showToast('Erro ao carregar do GitHub. Verifique as configurações.', true);
+      }
+    }
 
-        renderKanban();
-      };
-      reader.readAsText(file);
+    function startAutoSync() {
+      if (autoSyncInterval) clearInterval(autoSyncInterval);
+      autoSyncInterval = setInterval(() => {
+        fetchFromGitHub(true);
+      }, 12000); // Consulta atualizações a cada 12 segundos
     }
 
     function renderKanban() {
@@ -302,7 +466,6 @@
         return;
       }
 
-      // Descobrir todas as listas/colunas únicas
       const columnsSet = new Set();
       csvData.forEach(item => {
         const colName = item['List Name'] ? item['List Name'].trim() : 'Sem Coluna';
@@ -310,7 +473,6 @@
       });
 
       const columns = Array.from(columnsSet);
-
       const query = document.getElementById('searchInput').value.toLowerCase();
 
       columns.forEach(col => {
@@ -342,8 +504,8 @@
           const cardEl = document.createElement('div');
           cardEl.className = 'card';
           cardEl.draggable = true;
-          cardEl.dataset.index = item._index;
-          cardEl.ondragstart = (e) => dragStart(e, item._index);
+          cardEl.dataset.id = item['Card ID'] || item._index;
+          cardEl.ondragstart = (e) => dragStart(e, item['Card ID'] || item._index);
           cardEl.onclick = () => openCardModal(item._index);
 
           const cardTitle = item['Card Name'] || 'Sem Nome';
@@ -366,25 +528,113 @@
       });
     }
 
-    function dragStart(e, index) {
-      e.dataTransfer.setData("text/plain", index);
+    function dragStart(e, cardIdentifier) {
+      e.dataTransfer.setData("text/plain", cardIdentifier);
     }
 
-    function allowDrop(e) {
-      e.preventDefault();
-    }
+    function allowDrop(e) { e.preventDefault(); }
 
-    function dropCard(e, targetColumn) {
+    async function dropCard(e, targetColumn) {
       e.preventDefault();
-      const index = e.dataTransfer.getData("text/plain");
-      if (index !== null && csvData[index]) {
-        csvData[index]['List Name'] = targetColumn;
+      const identifier = e.dataTransfer.getData("text/plain");
+      
+      const itemIndex = csvData.findIndex(item => (item['Card ID'] || item._index).toString() === identifier.toString());
+      
+      if (itemIndex !== -1 && csvData[itemIndex]['List Name'] !== targetColumn) {
+        csvData[itemIndex]['List Name'] = targetColumn;
         renderKanban();
+        await syncSingleCardToGitHub(itemIndex);
       }
     }
 
-    function filterCards() {
-      renderKanban();
+    // Grava no GitHub evitando sobrescrever alterações de terceiros (Fetch-before-Commit)
+    async function syncSingleCardToGitHub(updatedIndex) {
+      if (!config.token) {
+        showToast('Configure o Token do GitHub para poder gravar em tempo real.', true);
+        return;
+      }
+
+      updateStatus('syncing', 'A gravar no GitHub...');
+
+      try {
+        const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`;
+        const headers = { 
+          'Authorization': `Bearer ${config.token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        };
+
+        // 1. Obter a versão mais recente e o SHA mais recente do servidor
+        const getRes = await fetch(`${url}?ref=${config.branch}`, { headers, cache: 'no-store' });
+        if (!getRes.ok) throw new Error('Não foi possível verificar a versão remota.');
+        
+        const getJson = await getRes.json();
+        const latestSHA = getJson.sha;
+        const remoteCSVText = b64_to_utf8(getJson.content.replace(/\n/g, ''));
+        const remoteParsed = parseCSV(remoteCSVText);
+
+        if (remoteParsed.length === 0) throw new Error('CSV remoto inválido.');
+
+        const remoteHeaders = remoteParsed[0];
+        const remoteData = remoteParsed.slice(1).map((row) => {
+          const item = {};
+          remoteHeaders.forEach((header, i) => { item[header] = row[i] !== undefined ? row[i] : ''; });
+          return item;
+        });
+
+        // 2. Mesclar a alteração do card atual no dataset remoto
+        const modifiedCard = csvData[updatedIndex];
+        const targetCardID = modifiedCard['Card ID'];
+
+        let targetRemoteIndex = -1;
+        if (targetCardID) {
+          targetRemoteIndex = remoteData.findIndex(r => r['Card ID'] === targetCardID);
+        } else {
+          targetRemoteIndex = updatedIndex;
+        }
+
+        if (targetRemoteIndex !== -1 && remoteData[targetRemoteIndex]) {
+          remoteHeaders.forEach(h => {
+            if (modifiedCard.hasOwnProperty(h)) {
+              remoteData[targetRemoteIndex][h] = modifiedCard[h];
+            }
+          });
+        }
+
+        // 3. Converter de volta para CSV
+        let csvContent = remoteHeaders.map(escapeCSVCell).join(',') + '\r\n';
+        remoteData.forEach(row => {
+          const line = remoteHeaders.map(h => escapeCSVCell(row[h] || '')).join(',');
+          csvContent += line + '\r\n';
+        });
+
+        // 4. Enviar atualização (PUT) com o SHA mais recente
+        const body = {
+          message: `Atualização de card: ${modifiedCard['Card Name'] || 'Card'}`,
+          content: utf8_to_b64(csvContent),
+          sha: latestSHA,
+          branch: config.branch
+        };
+
+        const putRes = await fetch(url, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (!putRes.ok) throw new Error(`Erro ao gravar: ${putRes.statusText}`);
+
+        const putJson = await putRes.json();
+        currentFileSHA = putJson.content.sha;
+
+        updateStatus('online', 'Sincronizado');
+        showToast('Alteração gravada no GitHub com sucesso!');
+
+      } catch (err) {
+        console.error(err);
+        updateStatus('warning', 'Erro ao gravar');
+        showToast('Erro ao sincronizar com o GitHub: ' + err.message, true);
+      }
     }
 
     function openCardModal(index) {
@@ -399,7 +649,7 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Coluna / Estado atual</label>
+            <label>Coluna / Estado</label>
             <input type="text" class="form-control" id="editListName" value="${item['List Name'] || ''}">
           </div>
           <div class="form-group">
@@ -436,12 +686,12 @@
       document.getElementById('cardModal').style.display = 'flex';
     }
 
-    function closeModal() {
+    function closeCardModal() {
       document.getElementById('cardModal').style.display = 'none';
       activeCardIndex = null;
     }
 
-    function saveCardDetails() {
+    async function saveCardDetails() {
       if (activeCardIndex === null) return;
       const item = csvData[activeCardIndex];
 
@@ -454,8 +704,9 @@
       if (item.hasOwnProperty('REVISOR')) item['REVISOR'] = document.getElementById('editRevisor').value;
       item['Card Description'] = document.getElementById('editCardDesc').value;
 
-      closeModal();
+      closeCardModal();
       renderKanban();
+      await syncSingleCardToGitHub(activeCardIndex);
     }
 
     function escapeCSVCell(str) {
@@ -469,12 +720,11 @@
 
     function exportUpdatedCSV() {
       if (csvData.length === 0 || rawCSVHeaders.length === 0) {
-        alert("Não existem dados para exportar.");
+        showToast("Não existem dados para exportar.", true);
         return;
       }
 
       let csvContent = rawCSVHeaders.map(escapeCSVCell).join(',') + '\r\n';
-
       csvData.forEach(row => {
         const line = rawCSVHeaders.map(header => escapeCSVCell(row[header] || '')).join(',');
         csvContent += line + '\r\n';
@@ -484,7 +734,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', 'trello_esteira_atualizada.csv');
+      link.setAttribute('download', 'esteira_trello_atualizada.csv');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
